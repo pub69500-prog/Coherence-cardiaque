@@ -18,7 +18,7 @@
     "Mer.mp3",
     "Riviere.mp3"
   ],
-  "defaultInhale": "Cloche3",
-  "defaultExhale": "ExpSon1",
+  "defaultInhale": "Cloche3.m4a",
+  "defaultExhale": "ExpSon1.m4a",
   "defaultMusic": "Music1.mp3"
 }
