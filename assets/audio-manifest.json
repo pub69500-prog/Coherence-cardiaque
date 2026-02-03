@@ -1,0 +1,20 @@
+{
+  "inhale": [
+    "InspSon1.m4a",
+    "InspSon2.m4a",
+    "InspSon3.m4a"
+  ],
+  "exhale": [
+    "ExpSon1.m4a",
+    "ExpSon2.m4a",
+    "ExpSon3.mp3"
+  ],
+  "music": [
+    "Music1.mp3",
+    "Music2.mp3",
+    "Music3.mp3"
+  ],
+  "defaultInhale": "InspSon1",
+  "defaultExhale": "ExpSon1",
+  "defaultMusic": "Music1.mp3"
+}
