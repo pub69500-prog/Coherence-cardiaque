@@ -1308,22 +1308,54 @@ if (musicSelect) {
     });
 }
 
-// Bouton "Nouvelle séance" sur l'écran de fin
+// Bouton "À bientôt" sur l'écran de fin
 const endScreenCloseBtn = document.getElementById('endScreenCloseBtn');
-if (endScreenCloseBtn) {
-    endScreenCloseBtn.addEventListener('click', () => {
-        const endScreenEl = document.getElementById('endScreen');
-        if (endScreenEl) {
-            endScreenEl.classList.remove('show');
-            endScreenEl.setAttribute('aria-hidden', 'true');
-        }
-        document.body.classList.remove('modal-open');
-        // Réaffiche le bon temps (au cas où)
-        if (!isRunning) {
+
+// Ferme l'écran de fin (et tente de fermer la fenêtre si le navigateur l'autorise)
+let endScreenCloseInProgress = false;
+function closeEndScreen(e) {
+    if (e) {
+        try { e.preventDefault(); } catch (_) {}
+        try { e.stopPropagation(); } catch (_) {}
+    }
+    if (endScreenCloseInProgress) return;
+    endScreenCloseInProgress = true;
+
+    // Sécurité : stoppe toute musique résiduelle
+    try { stopBackgroundMusicNow(); } catch (_) {}
+
+    const endScreenEl = document.getElementById('endScreen');
+    if (endScreenEl) {
+        endScreenEl.classList.remove('show');
+        endScreenEl.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('modal-open');
+
+    // Réaffiche le bon temps (au cas où)
+    if (typeof isRunning !== 'undefined' && !isRunning && typeof timerDisplay !== 'undefined' && timerDisplay && typeof sessionDurationInput !== 'undefined' && sessionDurationInput) {
+        try {
             timerDisplay.textContent = formatTime(parseInt(sessionDurationInput.value) * 60);
-        }
-    });
+        } catch (_) {}
+    }
+
+    // Tentative de fermeture de la fenêtre (fonctionne uniquement dans certains contextes)
+    try { window.close(); } catch (_) {}
+
+    // Relâche le verrou dans le tick suivant pour éviter double déclenchement (touch + click)
+    setTimeout(() => { endScreenCloseInProgress = false; }, 300);
 }
+
+if (endScreenCloseBtn) {
+    // Click classique
+    endScreenCloseBtn.addEventListener('click', closeEndScreen);
+
+    // iOS : sécurise le tap (peut déclencher click après touchend)
+    endScreenCloseBtn.addEventListener('touchend', closeEndScreen, { passive: false });
+
+    // Compat pointer events (desktop + certains mobiles)
+    endScreenCloseBtn.addEventListener('pointerup', closeEndScreen);
+}
+
 
 // Historique - EVENT LISTENERS
 if (historyBtn) {
