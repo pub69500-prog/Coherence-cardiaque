@@ -1,20 +1,22 @@
 {
   "inhale": [
-    "InspSon1.m4a",
-    "InspSon2.m4a",
-    "InspSon3.m4a"
+    "Cloche3.m4a",
+    "Cloche4.m4a",
+    "Cloche2.m4a"
+    "Cloche1.m4a"
   ],
   "exhale": [
     "ExpSon1.m4a",
-    "ExpSon2.m4a",
-    "ExpSon3.mp3"
+    "ClocheExp1.m4a",
+    "NotifExp.mp3"
   ],
   "music": [
     "Music1.mp3",
-    "Music2.mp3",
-    "Music3.mp3"
+    "Medit1.mp3",
+    "Cheminee.mp3",
+    "MarcheLac.mp3"
   ],
-  "defaultInhale": "InspSon1",
+  "defaultInhale": "Cloche3.m4a",
   "defaultExhale": "ExpSon1",
   "defaultMusic": "Music1.mp3"
 }
