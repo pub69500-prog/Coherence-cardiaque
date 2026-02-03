@@ -1221,8 +1221,8 @@ select {
 /* Toggle mode sombre */
 .theme-toggle-btn {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: calc(env(safe-area-inset-right, 0px) + 20px);
     z-index: 1000;
     width: 56px;
     height: 56px;
@@ -1337,8 +1337,8 @@ select {
 /* Bouton fermeture */
 .session-close-btn {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: calc(env(safe-area-inset-right, 0px) + 20px);
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -1559,16 +1559,16 @@ select {
     .theme-toggle-btn {
         width: 48px;
         height: 48px;
-        top: 15px;
-        right: 15px;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        right: calc(env(safe-area-inset-right, 0px) + 15px);
         font-size: 20px;
     }
     
     .session-close-btn {
         width: 44px;
         height: 44px;
-        top: 15px;
-        right: 15px;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        right: calc(env(safe-area-inset-right, 0px) + 15px);
         font-size: 20px;
     }
     
