@@ -213,6 +213,36 @@ function setMusicVolumeFromUI() {
     }
 }
 
+function stopBackgroundMusicNow() {
+    // Annule tout fondu en cours (si un stop arrive pendant un fade)
+    if (fadeOutTimeoutId) {
+        clearTimeout(fadeOutTimeoutId);
+        fadeOutTimeoutId = null;
+    }
+    if (fadeOutIntervalId) {
+        clearInterval(fadeOutIntervalId);
+        fadeOutIntervalId = null;
+    }
+    // Annule les rampes WebAudio éventuelles
+    if (backgroundGainNode && audioContext) {
+        try {
+            const now = audioContext.currentTime;
+            backgroundGainNode.gain.cancelScheduledValues(now);
+        } catch (_) {}
+    }
+    isFadingOut = false;
+
+    const targetVol = (parseInt(musicVolumeSlider?.value || '30', 10) / 100);
+    if (backgroundAudio) {
+        try { backgroundAudio.pause(); } catch (_) {}
+        try { backgroundAudio.currentTime = 0; } catch (_) {}
+        // Restaure le volume pour la prochaine lecture
+        try { backgroundAudio.volume = targetVol; } catch (_) {}
+    }
+    if (backgroundGainNode && audioContext) {
+        try { backgroundGainNode.gain.value = targetVol; } catch (_) {}
+    }
+}
 function fadeOutMusicAndStop(durationMs = 5000) {
     return new Promise((resolve) => {
         if (!backgroundAudio) return resolve();
@@ -223,6 +253,9 @@ function fadeOutMusicAndStop(durationMs = 5000) {
         const targetVol = (parseInt(musicVolumeSlider?.value || '30', 10) / 100);
 
         const finish = () => {
+            // Nettoie les timers de fondu
+            if (fadeOutTimeoutId) { clearTimeout(fadeOutTimeoutId); fadeOutTimeoutId = null; }
+            if (fadeOutIntervalId) { clearInterval(fadeOutIntervalId); fadeOutIntervalId = null; }
             try { backgroundAudio.pause(); } catch(e) {}
             try { backgroundAudio.currentTime = 0; } catch(e) {}
 
@@ -245,7 +278,10 @@ function fadeOutMusicAndStop(durationMs = 5000) {
                 backgroundGainNode.gain.cancelScheduledValues(now);
                 backgroundGainNode.gain.setValueAtTime(current, now);
                 backgroundGainNode.gain.linearRampToValueAtTime(0.0001, now + dur);
-                setTimeout(finish, durationMs + 50);
+                fadeOutTimeoutId = setTimeout(() => {
+                    fadeOutTimeoutId = null;
+                    finish();
+                }, durationMs + 50);
                 return;
             } catch (e) {
                 console.warn('Fade WebAudio impossible, fallback:', e);
@@ -257,13 +293,13 @@ function fadeOutMusicAndStop(durationMs = 5000) {
         const steps = 12;
         let step = 0;
         const interval = Math.max(30, Math.floor(durationMs / steps));
-        const timer = setInterval(() => {
+        fadeOutIntervalId = setInterval(() => {
             step++;
             const t = step / steps;
             const vol = Math.max(0, startVol * (1 - t));
             try { backgroundAudio.volume = vol; } catch(e) {}
             if (step >= steps) {
-                clearInterval(timer);
+                if (fadeOutIntervalId) { clearInterval(fadeOutIntervalId); fadeOutIntervalId = null; }
                 finish();
             }
         }, interval);
@@ -525,6 +561,8 @@ let backgroundAudio = null;
 let backgroundSourceNode = null;
 let backgroundGainNode = null;
 let isFadingOut = false;
+let fadeOutTimeoutId = null;
+let fadeOutIntervalId = null;
 let customInhaleAudio = null;
 // Track last used SFX audio so volume sliders can act immediately
 const currentSfxAudio = { inhale: null, exhale: null };
@@ -1106,6 +1144,10 @@ function startSession() {
 }
 
 async function stopSession(completed = false) {
+    // IMPORTANT: si stopSession est passé directement en callback d'event,
+    // "completed" reçoit un MouseEvent/TouchEvent -> on ne considère "terminée" que si === true.
+    const endedNaturally = (completed === true);
+
     isRunning = false;
     breathingZone.classList.remove('active');
     startBtn.style.display = 'block';
@@ -1118,8 +1160,8 @@ async function stopSession(completed = false) {
     breathText.classList.remove('visible');
     breathText.textContent = '';
 
-    // 🎵 Fin de séance: fondu + arrêt (uniquement si la séance se termine normalement)
-    if (completed) {
+    // 🎵 Arrêt musique : immédiat si arrêt manuel, fondu seulement si fin normale
+    if (endedNaturally) {
         // Sauvegarde dans l'historique uniquement si la séance est terminée
         try {
             addCompletedSessionToHistory({
@@ -1134,41 +1176,38 @@ async function stopSession(completed = false) {
 
         // Fondu musique sur 5 secondes
         await fadeOutMusicAndStop(5000);
-    } else if (backgroundAudio) {
-        try { backgroundAudio.pause(); } catch(e) {}
-        try { backgroundAudio.currentTime = 0; } catch(e) {}
+    } else {
+        stopBackgroundMusicNow();
     }
-    
+
     // Arrêter le son silencieux
     if (silentAudio) {
-        silentAudio.pause();
-        silentAudio.currentTime = 0;
+        try { silentAudio.pause(); } catch (_) {}
+        try { silentAudio.currentTime = 0; } catch (_) {}
         console.log('🔇 Audio silencieux arrêté');
     }
 
     progressFill.style.width = '0%';
     timerDisplay.textContent = '00:00';
 
-    // Écran de fin de séance (si la séance est allée au bout)
+    // Écran de fin de séance : on l'affiche aussi en cas d'arrêt manuel (sans attendre)
     if (endScreenEl) {
-        if (completed) {
-            // Titre + message aléatoire
+        if (endedNaturally) {
             if (endScreenTitleEl) endScreenTitleEl.textContent = "Te voilà détendu(e)";
             if (endScreenMsgEl) {
                 const msg = encouragementPhrases[Math.floor(Math.random() * encouragementPhrases.length)];
                 endScreenMsgEl.textContent = msg;
             }
-
-            endScreenEl.classList.add('show');
-            endScreenEl.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('modal-open');
         } else {
-            endScreenEl.classList.remove('show');
-            endScreenEl.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('modal-open');
+            if (endScreenTitleEl) endScreenTitleEl.textContent = "À bientôt";
+            if (endScreenMsgEl) endScreenMsgEl.textContent = "Séance arrêtée. Tu peux relancer une nouvelle séance quand tu veux.";
         }
+
+        endScreenEl.classList.add('show');
+        endScreenEl.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
     }
-    
+
     // 🔓 LIBÉRER LE WAKE LOCK
     if (wakeLock) {
         wakeLock.release()
@@ -1180,7 +1219,7 @@ async function stopSession(completed = false) {
                 console.log('⚠️ Erreur libération Wake Lock:', err.message);
             });
     }
-    
+
     // Update music library display
 }
 
@@ -1253,7 +1292,7 @@ function toggleHistory() {
 }
 
 startBtn.addEventListener('click', startSession);
-stopBtn.addEventListener('click', stopSession);
+stopBtn.addEventListener('click', () => stopSession(false));
 
 // 🎵 Sélection de la musique via le menu déroulant
 const musicSelect = document.getElementById('musicSelect');
