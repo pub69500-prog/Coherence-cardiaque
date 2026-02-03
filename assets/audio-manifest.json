@@ -2,7 +2,7 @@
   "inhale": [
     "Cloche3.m4a",
     "Cloche4.m4a",
-    "Cloche2.m4a"
+    "Cloche2.m4a",
     "Cloche1.m4a"
   ],
   "exhale": [
@@ -14,10 +14,10 @@
     "Music1.mp3",
     "Medit1.mp3",
     "Cheminee.mp3",
-    "MarcheLac.mp3"
+    "MarcheLac.mp3",
     "Mer.mp3"
   ],
-  "defaultInhale": "Cloche3.m4a",
+  "defaultInhale": "Cloche3",
   "defaultExhale": "ExpSon1",
   "defaultMusic": "Music1.mp3"
 }
