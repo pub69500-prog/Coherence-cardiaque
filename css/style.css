@@ -1646,3 +1646,40 @@ select {
         padding: 1rem 1.8rem;
     }
 }
+/* ==============================
+   Bouton "Démarrage rapide" (mobile-first)
+   ============================== */
+
+#startBtnTop{
+    margin-top: 14px;
+    padding: 0.95rem 1.2rem;
+    border-radius: 16px;
+    letter-spacing: 1.2px;
+    font-weight: 500;
+    text-transform: none;
+    font-size: 0.95rem;
+    box-shadow: 0 10px 26px rgba(127, 169, 155, 0.22);
+}
+
+#startBtnTop:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px rgba(127, 169, 155, 0.35);
+}
+
+#startBtnTop:active{
+    transform: scale(0.98);
+}
+
+#startBtnTop[disabled]{
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+@media (max-width: 968px){
+    #startBtnTop{
+        width: 100%;
+    }
+}
+
