@@ -589,6 +589,7 @@ const cycleCountDisplay = document.getElementById('cycleCount');
 const breathCountDisplay = document.getElementById('breathCount');
 const breathingZone = document.getElementById('breathingZone');
 const startBtn = document.getElementById('startBtn');
+const startBtnTop = document.getElementById('startBtnTop');
 const stopBtn = document.getElementById('stopBtn');
 const historyBtn = document.getElementById('historyBtn');
 const historyPanel = document.getElementById('historyPanel');
@@ -1051,6 +1052,7 @@ function startSession() {
     isRunning = true;
     breathingZone.classList.add('active');
     startBtn.style.display = 'none';
+    if (startBtnTop) startBtnTop.style.display = 'none';
     stopBtn.style.display = 'block';
 
     // Reset counters
@@ -1151,6 +1153,7 @@ async function stopSession(completed = false) {
     isRunning = false;
     breathingZone.classList.remove('active');
     startBtn.style.display = 'block';
+    if (startBtnTop) startBtnTop.style.display = 'block';
     stopBtn.style.display = 'none';
 
     clearTimeout(phaseTimer);
@@ -1292,6 +1295,7 @@ function toggleHistory() {
 }
 
 startBtn.addEventListener('click', startSession);
+if (startBtnTop) startBtnTop.addEventListener('click', startSession);
 stopBtn.addEventListener('click', () => stopSession(false));
 
 // 🎵 Sélection de la musique via le menu déroulant
