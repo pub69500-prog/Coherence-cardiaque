@@ -1295,7 +1295,11 @@ function toggleHistory() {
 }
 
 startBtn.addEventListener('click', startSession);
-if (startBtnTop) startBtnTop.addEventListener('click', startSession);
+if (startBtnTop) startBtnTop.addEventListener('click', () => {
+    // Déclenche exactement les mêmes traitements que le bouton principal (y compris ceux d'autres scripts)
+    if (startBtn) startBtn.click();
+    else startSession();
+});
 stopBtn.addEventListener('click', () => stopSession(false));
 
 // 🎵 Sélection de la musique via le menu déroulant
