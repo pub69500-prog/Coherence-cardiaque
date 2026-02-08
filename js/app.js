@@ -243,6 +243,7 @@ function stopBackgroundMusicNow() {
         try { backgroundGainNode.gain.value = targetVol; } catch (_) {}
     }
 }
+
 function fadeOutMusicAndStop(durationMs = 5000) {
     return new Promise((resolve) => {
         if (!backgroundAudio) return resolve();
@@ -379,8 +380,8 @@ async function loadBundledAudioManifest() {
                 }
             });
 
-document.getElementById('musicList').style.display = 'none';
-document.getElementById('musicLibrary').style.display = 'block';
+            document.getElementById('musicList').style.display = 'none';
+            document.getElementById('musicLibrary').style.display = 'block';
 
             // Présélectionner la musique par défaut depuis le manifest
             if (musicSelect && defaultMusic && data.music.includes(defaultMusic)) {
@@ -579,6 +580,49 @@ let musicLibrary = []; // Array to store music files
 let currentMusicIndex = -1;
 let wakeLock = null; // Pour empêcher la mise en veille iOS
 let silentAudio = null; // Audio silencieux pour garder le contexte actif sur iOS
+
+// 🔄 Réinitialisation complète de l'état audio entre deux séances
+function resetAudioState() {
+    console.log('🔄 Réinitialisation complète de l\'état audio...');
+    
+    // 1. Arrêter et nettoyer tous les sons des pools
+    for (const phase of ['inhale', 'exhale']) {
+        const pool = sfxPools[phase];
+        if (pool && pool.pool) {
+            pool.pool.forEach(audio => {
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.src = ''; // Force le nettoyage
+                } catch (e) {}
+            });
+            pool.pool = [];
+            pool.idx = 0;
+            pool.src = null;
+        }
+    }
+    
+    // 2. Réinitialiser les références audio courantes
+    currentSfxAudio.inhale = null;
+    currentSfxAudio.exhale = null;
+    
+    // 3. Nettoyer la musique de fond
+    stopBackgroundMusicNow();
+    
+    // 4. Réinitialiser l'Audio Context si nécessaire
+    if (audioContext && audioContext.state === 'suspended') {
+        try {
+            audioContext.resume();
+        } catch (e) {
+            console.warn('Impossible de reprendre l\'Audio Context:', e);
+        }
+    }
+    
+    // 5. Reconstruire les pools avec les sons actuellement sélectionnés
+    warmupSfxPools();
+    
+    console.log('✅ État audio réinitialisé');
+}
 
 // DOM elements
 const breathingCircle = document.getElementById('breathingCircle');
@@ -837,7 +881,7 @@ backgroundMusicInput.addEventListener('change', (e) => {
             musicLibrary.push(musicObj);
         });
         
-document.getElementById('musicList').style.display = 'none';
+        document.getElementById('musicList').style.display = 'none';
 
         // Auto-select first music if none selected
         if (currentMusicIndex === -1 && musicLibrary.length > 0) {
@@ -845,7 +889,6 @@ document.getElementById('musicList').style.display = 'none';
         }
     }
 });
-
 
 window.selectMusic = function(index) {
     if (index < 0 || index >= musicLibrary.length) return;
@@ -881,7 +924,7 @@ window.selectMusic = function(index) {
     document.getElementById('musicFileName').textContent = `Sélectionnée: ${selectedMusic.name}`;
     musicVolumeControl.style.display = 'flex';
     
-document.getElementById('musicList').style.display = 'none';
+    document.getElementById('musicList').style.display = 'none';
 
     // Auto-play if session is running
     if (isRunning) {
@@ -917,16 +960,31 @@ window.removeMusic = function(index) {
         currentMusicIndex--;
     }
     
-document.getElementById('musicList').style.display = 'none';
+    document.getElementById('musicList').style.display = 'none';
+};
+
+// Lecture des sons inhale/exhale via pool (sfxPools)
+function playSound(phase) {
+    const volume = (phase === 'inhale')
+        ? parseInt(inhaleVolumeSlider.value, 10)
+        : parseInt(exhaleVolumeSlider.value, 10);
+
+    const vol = Math.max(0, Math.min(1, volume / 100));
+
+    const src = buildSfxSrc(phase);
     if (!src) return;
 
+    // Prépare / met à jour le pool
     ensureSfxPool(phase, src);
-    const p = sfxPools[phase];
-    if (!p || !p.pool.length) return;
 
-    // Prend une instance différente à chaque déclenchement
-    const audio = p.pool[p.idx];
-    p.idx = (p.idx + 1) % p.pool.length;
+    const p = sfxPools[phase];
+    if (!p || !p.pool || p.pool.length === 0) return;
+
+    // Utilise l'index EXISTANT (idx)
+    const index = (typeof p.idx === 'number') ? p.idx : 0;
+    const audio = p.pool[index % p.pool.length];
+    p.idx = (index + 1) % p.pool.length;
+
     currentSfxAudio[phase] = audio;
 
     try {
@@ -970,38 +1028,6 @@ function updateProgress() {
     progressFill.style.width = `${progress}%`;
     timerDisplay.textContent = formatTime(totalTime - elapsedTime);
 }
-// Lecture des sons inhale/exhale
-// Lecture des sons inhale/exhale via pool (sfxPools)
-function playSound(phase) {
-    const volume = (phase === 'inhale')
-        ? parseInt(inhaleVolumeSlider.value, 10)
-        : parseInt(exhaleVolumeSlider.value, 10);
-
-    const vol = Math.max(0, Math.min(1, volume / 100));
-
-    const src = buildSfxSrc(phase);
-    if (!src) return;
-
-    // Prépare / met à jour le pool
-    ensureSfxPool(phase, src);
-
-    const p = sfxPools[phase];
-    if (!p || !p.pool || p.pool.length === 0) return;
-
-    // Utilise l’index EXISTANT (idx)
-    const index = (typeof p.idx === 'number') ? p.idx : 0;
-    const audio = p.pool[index % p.pool.length];
-    p.idx = (index + 1) % p.pool.length;
-
-    try { audio.volume = vol; } catch (_) {}
-    try { audio.currentTime = 0; } catch (_) {}
-
-    const playPromise = audio.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {});
-    }
-}
-
 
 function startInhale() {
     currentPhase = 'inhale';
@@ -1034,6 +1060,9 @@ function startExhale() {
 
 function startSession() {
     if (isRunning) return;
+
+    // 🔄 Reset de l'état audio avant de démarrer (sécurité)
+    resetAudioState();
 
     // Cacher l'écran de fin de séance
     const endScreenEl = document.getElementById('endScreen');
@@ -1346,6 +1375,9 @@ function closeEndScreen(e) {
         } catch (_) {}
     }
 
+    // 🔄 AJOUT : Réinitialisation complète de l'état audio
+    resetAudioState();
+
     // Tentative de fermeture de la fenêtre (fonctionne uniquement dans certains contextes)
     try { window.close(); } catch (_) {}
 
@@ -1363,7 +1395,6 @@ if (endScreenCloseBtn) {
     // Compat pointer events (desktop + certains mobiles)
     endScreenCloseBtn.addEventListener('pointerup', closeEndScreen);
 }
-
 
 // Historique - EVENT LISTENERS
 if (historyBtn) {
